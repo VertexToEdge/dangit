@@ -235,14 +235,25 @@ namespace git
         }
     }
 
+    class GitLogHead : GitLog
+    {
+        public GitLogHead(string gitPath):base(gitPath + "\\logs\\HEAD")
+        {
+
+        }
+    }
+    class GitLogBranch : GitLog
+    {
+        public GitLogBranch(string gitPath,string nameBranch) : base(gitPath + "\\logs\\refs\\heads\\" + nameBranch)
+        {
+
+        }
+    }
     class GitIndex : GitResource
     {
         string indexSHA1;
 
-        public GitIndex(string gitPath): base(gitPath+"\\Index")
-        {
-
-        }
+        public GitIndex(string gitPath): base(gitPath+"\\Index") {}
     }
 
     class Git
