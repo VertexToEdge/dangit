@@ -224,9 +224,14 @@ namespace git
         {
             touch();
         }
-        public void AddLog(string parentSHA1, string commitSHA1, string commitor, string email, long time, string type, string message )
+        public void AddLog(string parentSHA1, string commitSHA1, string commitor, string email, long time, string type, string message="" )
         {
-
+            string log = string.Format("{0} {1} {2} <{3}> {4} {5}",parentSHA1,commitSHA1,commitor,email,time,type);
+            if (message != "")
+            {
+                log += ": " + message;
+            }
+            AppendContent(log);
         }
     }
 
