@@ -144,32 +144,7 @@ namespace git
 
 namespace dangit
 {
-    [Serializable]
-    class parent
-    {
-        public int a;
-        public int b;
-        public void WriteParent()
-        {
-            Stream ws = new FileStream("parent1.dat", FileMode.Create);
-            BinaryFormatter s = new BinaryFormatter();
-            s.Serialize(ws, this);
-            ws.Close();
-        }
-    }
 
-    class child : parent
-    {
-        public int c;
-        public int d;
-        public void WriteChild()
-        {
-            Stream ws = new FileStream("child.dat", FileMode.Create);
-            BinaryFormatter s = new BinaryFormatter();
-            s.Serialize(ws, this);
-            ws.Close();
-        }
-    }
 
     class Program
     {
@@ -178,15 +153,6 @@ namespace dangit
      
             String cDir = Directory.GetCurrentDirectory();
             Console.WriteLine(cDir);
-            child a = new child();
-
-            a.a = 1;
-            a.b = 2;
-            a.c = 3;
-            a.d = 4;
-            a.WriteParent();
-            a.WriteChild();
-
 
         }
     }
