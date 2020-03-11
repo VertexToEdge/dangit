@@ -133,9 +133,17 @@ namespace git
             if (isExists())
             {
                 StreamReader sr =  File.OpenText(resPath);
-                return sr.ReadLine();
+                string result = sr.ReadLine();
+                sr.Close();
+                return result;
             }
             return "";
+        }
+        public void setContent(string data)
+        {
+            FileStream fs = File.OpenWrite(this.resPath);
+            fs.Write(Encoding.Default.GetBytes(data));
+            fs.Close();
         }
     }
     class GitHead:GitResource
