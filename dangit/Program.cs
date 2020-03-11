@@ -22,6 +22,11 @@ namespace git
         string sha1="";
         public gitObjectType type;
 
+
+        public string getSHA1()
+        {
+            return sha1;
+        }
         public MemoryStream ObjectToMemory()
         {
             MemoryStream ms = new MemoryStream();
@@ -44,7 +49,7 @@ namespace git
                 return sb.ToString();
             }
         }
-        public void WriteObject(string gitPath)
+        public string WriteObject(string gitPath)
         {
             MemoryStream ms = ObjectToMemory();
             string sha1 = makeSha1(ms);
@@ -63,6 +68,7 @@ namespace git
                 ws.Close();
             }
             this.sha1 = sha1;
+            return this.sha1;
         }
 
         public static GitObject ReadObject(string gitPath, string sha1)
@@ -102,6 +108,18 @@ namespace git
             this.type = gitObjectType.Blob;
         }
 
+        public static string CreateBlob(string gitPath, FileInfo file)
+        {
+            Blob b = new Blob();
+            if (file.Exists){
+                FileStream fs = file.OpenRead();
+                b.name = file.Name;
+                b.content = File.ReadAllBytes(file.FullName);
+                return b.WriteObject(gitPath);
+            }
+            return "";
+        }
+
     }
 
     [Serializable]
@@ -112,6 +130,14 @@ namespace git
         public Tree()
         {
             this.type = gitObjectType.Tree;
+        }
+        public void AddTree(string sha1)
+        {
+            trees.Add(sha1);
+        }
+        public void AddBlob(string sha1)
+        {
+            blobs.Add(sha1);
         }
     }
 
@@ -174,6 +200,15 @@ namespace git
         }
     }
 
+    class GitIndex : GitResource
+    {
+        string indexSHA1;
+
+        public GitIndex(string gitPath): base(gitPath+"\\Index")
+        {
+
+        }
+    }
 
     class Git
     {
@@ -239,6 +274,44 @@ namespace git
             DirectoryCreator("refs\\tags");
 
             GitHead head = new GitHead(this.gitPath);
+        }
+
+
+
+        //Todo: filter 체커 만들기
+        public void GitAdd(List<string> filters)
+        {
+            Func<DirectoryInfo, string> TreeCreator = null;
+            TreeCreator =  delegate (DirectoryInfo path)
+             {
+                 Tree t = new Tree();
+                 foreach (DirectoryInfo d in path.GetDirectories())
+                 {
+                    //gitPath면 스킵
+                    if (d.FullName == this.gitPath)
+                     {
+                         continue;
+                     }
+
+                    //여기서 filter 돌리기
+
+
+                    t.AddTree(TreeCreator(d));
+
+                 }
+                 foreach (FileInfo f in path.GetFiles())
+                 {
+                     //여기서 filter 돌리기
+
+                     t.AddBlob(Blob.CreateBlob(this.gitPath, f));
+                 }
+
+                 
+                 return t.WriteObject(this.gitPath);
+             };
+            string indexSHA1 = TreeCreator(new DirectoryInfo(this.rootPath));
+            GitIndex index = new GitIndex(this.gitPath);
+            index.setContent(indexSHA1);
         }
 
         public Git(string workPath)
