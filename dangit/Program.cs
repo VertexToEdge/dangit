@@ -141,9 +141,21 @@ namespace git
         }
         public void setContent(string data)
         {
-            FileStream fs = File.OpenWrite(this.resPath);
+            FileStream fs = new FileStream(this.resPath, FileMode.Create);
             fs.Write(Encoding.Default.GetBytes(data));
             fs.Close();
+        }
+        public void AppendContent(string data)
+        {
+            FileStream fs = new FileStream(this.resPath, FileMode.Append);
+            fs.Write(Encoding.Default.GetBytes(data.Trim() + "\n"));
+        }
+        public void init(string defaultValue)
+        {
+            if (!isExists())
+            {
+                setContent(defaultValue);
+            }
         }
     }
     class GitHead:GitResource
@@ -152,23 +164,17 @@ namespace git
 
         public GitHead(string gitPath) : base(gitPath+"\\HEAD")
         {
+            init("ref: refs/heads/master");
+
             string data = getContent();
             if(data.IndexOf("ref: ") == 0)
             {
-                head = data.Substring("ref: ".Length);
+                head = data.Substring("ref: ".Length).Trim();
             }
         }
-
-        public void init()
-        {
-            if (isExists()){
-                FileStream fs = File.OpenWrite(this.resPath);
-                fs.Write(Encoding.Default.GetBytes( "ref: refs/heads/master\n"));
-                fs.Close();
-            }
-        }
-
     }
+
+
     class Git
     {
         // .git 경로
@@ -176,6 +182,9 @@ namespace git
         
         // git 실행한 경로
         string workPath="";
+
+        // .git 한 단계 위, localRepo의 rootPath
+        string rootPath = "";
 
         public bool findGitPath()
         {
@@ -229,13 +238,19 @@ namespace git
             DirectoryCreator("refs\\heads");
             DirectoryCreator("refs\\tags");
 
+            GitHead head = new GitHead(this.gitPath);
         }
 
         public Git(string workPath)
         {
             this.workPath = workPath;
+            if (! findGitPath())
+            {
+                throw new System.SystemException(".git을 찾을 수 없습니다.");
+            }
+            //"\.git" => 5글자
+            this.rootPath = this.gitPath.Substring(0,this.gitPath.Length - 5);
         }
-
     }
 }
 
