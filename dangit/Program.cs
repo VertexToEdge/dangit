@@ -9,7 +9,7 @@ using System.Text;
 namespace git
 {
     [Serializable]
-    enum gitObjectType{
+    enum gitObjectType {
         Commit,
         Tree,
         Blob
@@ -19,7 +19,7 @@ namespace git
     [Serializable]
     class GitObject
     {
-        string sha1="";
+        string sha1 = "";
         public gitObjectType type;
 
 
@@ -87,19 +87,28 @@ namespace git
     class Commit : GitObject
     {
         List<string> parent;
-        string commiter;
+        string committer;
         string author;
         string message;
 
-        public Commit()
+        public Commit(string parent, string committer, string author, string message)
         {
+            AddParent(parent);
+            this.committer = committer;
+            this.author = author;
+            this.message = message;
+
             this.type = gitObjectType.Commit;
         }
-        
+        public void AddParent(string parent)
+        {
+            this.parent.Add(parent);
+        }
+
     }
 
     [Serializable]
-    class Blob: GitObject
+    class Blob : GitObject
     {
         string name;
         byte[] content;
@@ -111,7 +120,7 @@ namespace git
         public static string CreateBlob(string gitPath, FileInfo file)
         {
             Blob b = new Blob();
-            if (file.Exists){
+            if (file.Exists) {
                 FileStream fs = file.OpenRead();
                 b.name = file.Name;
                 b.content = File.ReadAllBytes(file.FullName);
@@ -164,7 +173,7 @@ namespace git
         {
             if (isExists())
             {
-                StreamReader sr =  File.OpenText(resPath);
+                StreamReader sr = File.OpenText(resPath);
                 string result = sr.ReadLine();
                 sr.Close();
                 return result;
@@ -190,26 +199,46 @@ namespace git
             }
         }
     }
-    class GitHead:GitResource
+    class GitHead : GitResource
     {
-        string head="";
+        string head = "";
 
         public string getHead()
         {
             return head;
         }
 
-        public GitHead(string gitPath) : base(gitPath+"\\HEAD")
+        public GitHead(string gitPath) : base(gitPath + "\\HEAD")
         {
             init("ref: refs/heads/master");
 
             string data = getContent();
-            if(data.IndexOf("ref: ") == 0)
+            if (data.IndexOf("ref: ") == 0)
             {
                 head = data.Substring("ref: ".Length).Trim();
             }
         }
     }
+
+    class Log{
+        public string parentSHA1;
+        public string commitSHA1;
+        public string committer;
+        public string email;
+        public long time;
+        public string type;
+        public string message = "";
+        public Log(string parentSHA1, string commitSHA1, string committer, string email, long time, string type, string message = "",)
+        {
+            this.parentSHA1 = parentSHA1;
+            this.commitSHA1 = commitSHA1;
+            this.committer = committer;
+            this.email = email;
+            this.time = time;
+            this.type = type;
+            this.message = message;
+        }
+   }
 
     class GitLog : GitResource
     {
@@ -222,40 +251,50 @@ namespace git
 
         public GitLog(string gitLogPath) : base(gitLogPath)
         {
-            touch();
         }
-        public void AddLog(string parentSHA1, string commitSHA1, string commitor, string email, long time, string type, string message="" )
+        public void AddLog( Log log )
         {
-            string log = string.Format("{0} {1} {2} <{3}> {4} {5}",parentSHA1,commitSHA1,commitor,email,time,type);
-            if (message != "")
+            string strLog = string.Format("{0} {1} {2} <{3}> {4} {5}",log.parentSHA1, log.commitSHA1, log.committer, log.email, log.time, log.type);
+            if (log.message != "")
             {
-                log += ": " + message;
+                strLog += ": " + log.message;
             }
-            AppendContent(log);
+            AppendContent(strLog);
         }
     }
 
     class GitLogHead : GitLog
     {
-        public GitLogHead(string gitPath):base(gitPath + "\\logs\\HEAD")
-        {
-
-        }
+        public GitLogHead(string gitPath) : base(gitPath + "\\logs\\HEAD") { }
     }
     class GitLogBranch : GitLog
     {
-        public GitLogBranch(string gitPath,string nameBranch) : base(gitPath + "\\logs\\refs\\heads\\" + nameBranch)
-        {
-
-        }
+        public GitLogBranch(string gitPath,string nameBranch) : base(gitPath + "\\logs\\refs\\heads\\" + nameBranch) { }
     }
+
+
     class GitIndex : GitResource
     {
         string indexSHA1;
 
         public GitIndex(string gitPath): base(gitPath+"\\Index") {}
+
+        public string getIndex()
+        {
+            this.indexSHA1 = getContent().Trim();
+            return this.indexSHA1;
+        }
     }
 
+    class GitBranch : GitResource
+    {
+        public GitBranch(string gitPath, string nameBranch): base(gitPath + "\\refs\\heads\\" + nameBranch) { }
+
+        public string getBranchHead()
+        {
+            return getContent().Trim();
+        }
+    }
     class Git
     {
         // .git 경로
@@ -266,6 +305,11 @@ namespace git
 
         // .git 한 단계 위, localRepo의 rootPath
         string rootPath = "";
+
+        string committer="[defaultCommitter]";
+        string email="default@default.com";
+        string author="[defaultAuthor]";
+
 
         public bool findGitPath()
         {
@@ -365,10 +409,28 @@ namespace git
             index.setContent(indexSHA1);
         }
 
-        public GitCommit()
+        public GitCommit(string message)
         {
-            GitHead head = new GitHead();
+            GitHead head = new GitHead(this.gitPath);
+            GitIndex index = new GitIndex(this.gitPath);
+
+            string headBranchName = head.getHead().Split("/").Last();
+
+            long now = getTimeStamp();
+            GitBranch branch = new GitBranch(this.gitPath, headBranchName);
             
+            
+            Commit commit = new Commit(new string('0', 40), this.committer, this.author, message);
+            string CommitSHA1 = commit.WriteObject(this.gitPath);
+
+            if (!branch.isExists())
+            {
+                
+
+            }
+
+            Commit commit = new Commit()
+            branch.setContent(index.getIndex());
             
         }
 
