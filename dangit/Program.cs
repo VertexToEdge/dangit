@@ -10,7 +10,7 @@ namespace git
 {
     [Serializable]
     enum gitObjectType{
-        commit,
+        Commit,
         Tree,
         Blob
 
@@ -20,9 +20,7 @@ namespace git
     class GitObject
     {
         string sha1="";
-        gitObjectType type;
-
-
+        public gitObjectType type;
 
         public MemoryStream ObjectToMemory()
         {
@@ -86,6 +84,11 @@ namespace git
         string commiter;
         string author;
         string message;
+
+        public Commit()
+        {
+            this.type = gitObjectType.Commit;
+        }
         
     }
 
@@ -94,16 +97,70 @@ namespace git
     {
         string name;
         byte[] content;
+        public Blob()
+        {
+            this.type = gitObjectType.Blob;
+        }
+
     }
 
     [Serializable]
     class Tree : GitObject
     {
-
         List<string> trees;
         List<string> blobs;
+        public Tree()
+        {
+            this.type = gitObjectType.Tree;
+        }
     }
 
+    class GitResource
+    {
+        public string resPath;
+        public bool isExists()
+        {
+            return File.Exists(this.resPath);
+        }
+
+        public GitResource(string resPath)
+        {
+            this.resPath = resPath;
+        }
+
+        public string getContent()
+        {
+            if (isExists())
+            {
+                StreamReader sr =  File.OpenText(resPath);
+                return sr.ReadLine();
+            }
+            return "";
+        }
+    }
+    class GitHead:GitResource
+    {
+        string head="";
+
+        public GitHead(string gitPath) : base(gitPath+"\\HEAD")
+        {
+            string data = getContent();
+            if(data.IndexOf("ref: ") == 0)
+            {
+                head = data.Substring("ref: ".Length);
+            }
+        }
+
+        public void init()
+        {
+            if (isExists()){
+                FileStream fs = File.OpenWrite(this.resPath);
+                fs.Write(Encoding.Default.GetBytes( "ref: refs/heads/master\n"));
+                fs.Close();
+            }
+        }
+
+    }
     class Git
     {
         // .git 경로
@@ -134,6 +191,38 @@ namespace git
             return false;
         }
 
+        Action<string> createNotexistsFolder(string path)
+        {
+            string basePath = path;
+            if (Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+            Action<string> p = delegate (string subpath)
+               {
+                   if (Directory.Exists(basePath + "\\" + subpath))
+                   {
+                       Directory.CreateDirectory(basePath + "\\" + subpath);
+                   }
+               };
+            return p;
+        }
+
+
+        public void GitInit()
+        {
+            this.gitPath = this.workPath + "\\.git";
+            var DirectoryCreator = createNotexistsFolder(this.gitPath);
+            DirectoryCreator("objects");
+            DirectoryCreator("logs");
+            DirectoryCreator("logs\\refs");
+            DirectoryCreator("logs\\refs\\heads");
+            DirectoryCreator("refs");
+            DirectoryCreator("refs\\heads");
+            DirectoryCreator("refs\\tags");
+
+        }
+
         public Git(string workPath)
         {
             this.workPath = workPath;
@@ -153,6 +242,8 @@ namespace dangit
      
             String cDir = Directory.GetCurrentDirectory();
             Console.WriteLine(cDir);
+            git.Git a = new git.Git(cDir);
+            a.GitInit();
 
         }
     }
