@@ -154,6 +154,12 @@ namespace git
             this.resPath = resPath;
         }
 
+        public void touch()
+        {
+            FileStream fs = new FileStream(this.resPath, FileMode.Append);
+            fs.Close();
+        }
+
         public string getContent()
         {
             if (isExists())
@@ -188,12 +194,38 @@ namespace git
     {
         string head="";
 
+        public string getHead()
+        {
+            return head;
+        }
+
         public GitHead(string gitPath) : base(gitPath+"\\HEAD")
         {
             init("ref: refs/heads/master");
 
             string data = getContent();
             if(data.IndexOf("ref: ") == 0)
+            {
+                head = data.Substring("ref: ".Length).Trim();
+            }
+        }
+    }
+
+    class GitLog : GitResource
+    {
+        string head = "";
+
+        public string getHead()
+        {
+            return head;
+        }
+
+        public GitLog(string gitLogPath) : base(gitLogPath)
+        {
+            init("ref: refs/heads/master");
+
+            string data = getContent();
+            if (data.IndexOf("ref: ") == 0)
             {
                 head = data.Substring("ref: ".Length).Trim();
             }
@@ -312,6 +344,13 @@ namespace git
             string indexSHA1 = TreeCreator(new DirectoryInfo(this.rootPath));
             GitIndex index = new GitIndex(this.gitPath);
             index.setContent(indexSHA1);
+        }
+
+        public GitCommit()
+        {
+            GitHead head = new GitHead();
+            
+            
         }
 
         public Git(string workPath)
