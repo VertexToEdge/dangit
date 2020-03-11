@@ -222,13 +222,11 @@ namespace git
 
         public GitLog(string gitLogPath) : base(gitLogPath)
         {
-            init("ref: refs/heads/master");
+            touch();
+        }
+        public void AddLog(string parentSHA1, string commitSHA1, string commitor, string email, long time, string type, string message )
+        {
 
-            string data = getContent();
-            if (data.IndexOf("ref: ") == 0)
-            {
-                head = data.Substring("ref: ".Length).Trim();
-            }
         }
     }
 
@@ -309,6 +307,11 @@ namespace git
         }
 
 
+        public long getTimeStamp()
+        {
+            var timeSpan = (DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0));
+            return (long)timeSpan.TotalSeconds;
+        }
 
         //Todo: filter 체커 만들기
         public void GitAdd(List<string> filters)
