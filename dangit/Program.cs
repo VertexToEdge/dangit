@@ -2,38 +2,106 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace git
 {
+    [Serializable]
     enum gitObjectType{
         commit,
         Tree,
         Blob
 
     }
+
+    [Serializable]
     class GitObject
     {
-        string sha1;
+        string sha1="";
         gitObjectType type;
+
+
+
+        public MemoryStream ObjectToMemory()
+        {
+            MemoryStream ms = new MemoryStream();
+            BinaryFormatter s = new BinaryFormatter();
+            s.Serialize(ms, this);
+            return ms;
+        }
+        string makeSha1(MemoryStream ms)
+        {
+            using (SHA1Managed sha1 = new SHA1Managed())
+            {
+                var hash = sha1.ComputeHash(ms.ToArray());
+                var sb = new StringBuilder(hash.Length * 2);
+
+                foreach (byte b in hash)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+
+                return sb.ToString();
+            }
+        }
+        public void WriteObject(string gitPath)
+        {
+            MemoryStream ms = ObjectToMemory();
+            string sha1 = makeSha1(ms);
+            string objPath = gitPath + "\\objects\\" + sha1.Substring(0, 2);
+            DirectoryInfo di = new DirectoryInfo(objPath);
+
+            if (!di.Exists)
+            {
+                di.Create();
+            }
+            FileInfo fi = new FileInfo(objPath + "\\" + sha1.Substring(2));
+            if (!fi.Exists)
+            {
+                Stream ws = fi.Create();
+                ws.Write(ms.ToArray());
+                ws.Close();
+            }
+            this.sha1 = sha1;
+        }
+
+        public static GitObject ReadObject(string gitPath, string sha1)
+        {
+            FileInfo fi = new FileInfo(gitPath + "\\objects\\" + sha1.Substring(0, 2) + "\\" + sha1.Substring(2));
+            if (fi.Exists)
+            {
+                BinaryFormatter s = new BinaryFormatter();
+                return (GitObject)s.Deserialize(fi.OpenRead());
+            }
+            return new GitObject();
+        }
     }
 
+    [Serializable]
     class Commit : GitObject
     {
-        string parentSha1;
+        List<string> parent;
         string commiter;
         string author;
+        string message;
         
     }
 
+    [Serializable]
     class Blob: GitObject
     {
         string name;
         byte[] content;
     }
 
+    [Serializable]
     class Tree : GitObject
     {
-        GitObject[] data;
+
+        List<string> trees;
+        List<string> blobs;
     }
 
     class Git
@@ -55,7 +123,7 @@ namespace git
                 DirectoryInfo dInfo = new DirectoryInfo(tmpPath);
                 if (dInfo.GetDirectories().Any(i => i.Name == ".git"))
                 {
-                    gitPath = tmpPath + "\\.git";
+                    this.gitPath = tmpPath + "\\.git";
                     return true;
                 }
                 else
@@ -76,6 +144,33 @@ namespace git
 
 namespace dangit
 {
+    [Serializable]
+    class parent
+    {
+        public int a;
+        public int b;
+        public void WriteParent()
+        {
+            Stream ws = new FileStream("parent1.dat", FileMode.Create);
+            BinaryFormatter s = new BinaryFormatter();
+            s.Serialize(ws, this);
+            ws.Close();
+        }
+    }
+
+    class child : parent
+    {
+        public int c;
+        public int d;
+        public void WriteChild()
+        {
+            Stream ws = new FileStream("child.dat", FileMode.Create);
+            BinaryFormatter s = new BinaryFormatter();
+            s.Serialize(ws, this);
+            ws.Close();
+        }
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -83,6 +178,16 @@ namespace dangit
      
             String cDir = Directory.GetCurrentDirectory();
             Console.WriteLine(cDir);
+            child a = new child();
+
+            a.a = 1;
+            a.b = 2;
+            a.c = 3;
+            a.d = 4;
+            a.WriteParent();
+            a.WriteChild();
+
+
         }
     }
 }
